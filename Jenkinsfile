@@ -8,12 +8,15 @@ pipeline {
     environment {
         COURSE = "Jenkins"
         appVersion = ""
+        ACC_ID = "014641572640"
+        PROJECT = "roboshop"
+        COMPONENT = "catalogue"
     }
     options {
-        timeout(time: 10, unit: 'MINUTES') 
+        timeout(time: 10, unit: 'MINUTES')
         disableConcurrentBuilds()
     }
-    
+
     // This is build section
     stages {
         stage('Read Version') {
@@ -35,6 +38,20 @@ pipeline {
                 }
             }
         }
+        stage('Build Image') {
+            steps {
+                script{
+                    withAWS(region:'us-east-1',credentials:'aws-creds') {
+                        sh """
+                            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
+                            docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion} .
+                            docker images
+                            docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion}
+                        """
+                    }
+                }
+            }
+        }
         stage('Deploy') {
             // input {
             //     message "Should we continue?"
@@ -44,7 +61,7 @@ pipeline {
             //         string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
             //     }
             // }
-            when { 
+            when {
                 expression { "$params.DEPLOY" == "true" }
             }
             steps {
