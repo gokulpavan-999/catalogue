@@ -31,11 +31,14 @@ pipeline {
         }
         stage('Install Dependencies') {
             steps {
-                script{
-                    sh """
-                        /usr/bin/npm install
-                    """
-                }
+                script {
+                    sh '''
+                        export PATH=/usr/bin:$PATH
+                        node -v
+                        npm -v
+                        npm install
+                   '''
+               }
             }
         }
         stage('Build Image') {
