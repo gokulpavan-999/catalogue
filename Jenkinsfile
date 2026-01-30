@@ -33,7 +33,7 @@ pipeline {
             steps {
                 script{
                     sh """
-                        npm install
+                        /usr/bin/npm install
                     """
                 }
             }
