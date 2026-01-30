@@ -1,50 +1,61 @@
 pipeline {
-    // These are pre-build section
     agent {
         node {
             label 'AGENT-1'
         }
     }
+
+    // Pre-build environment variables
     environment {
         COURSE = "Jenkins"
-        appVersion = ""
         ACC_ID = "014641572640"
         PROJECT = "roboshop"
         COMPONENT = "catalogue"
     }
+
+    // Timeout & concurrency options
     options {
         timeout(time: 10, unit: 'MINUTES')
         disableConcurrentBuilds()
     }
 
-    // This is build section
+    // Tools section: NodeJS plugin ensures node & npm are available
+    tools {
+        nodejs 'node20' // Name must match NodeJS installation in Jenkins Global Tool Configuration
+    }
+
     stages {
+
+        // Stage 1: Read Version from package.json
         stage('Read Version') {
             steps {
-                script{
+                script {
+                    // Use a local variable, not environment block
                     def packageJSON = readJSON file: 'package.json'
                     appVersion = packageJSON.version
-                    echo "app version: ${appVersion}"
+                    echo "App version: ${appVersion}"
                 }
-
             }
         }
+
+        // Stage 2: Install Node.js dependencies
         stage('Install Dependencies') {
             steps {
                 script {
                     sh '''
-                        export PATH=/usr/bin:$PATH
                         node -v
                         npm -v
                         npm install
-                   '''
-               }
+                    '''
+                }
             }
         }
+
+        // Stage 3: Build Docker Image & Push to ECR
         stage('Build Image') {
             steps {
-                script{
-                    withAWS(region:'us-east-1',credentials:'aws-creds') {
+                script {
+                    withAWS(region:'us-east-1', credentials:'aws-creds') {
                         sh """
                             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
                             docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion} .
@@ -55,40 +66,37 @@ pipeline {
                 }
             }
         }
+
+        // Stage 4: Deploy (Optional / gated by parameter)
         stage('Deploy') {
-            // input {
-            //     message "Should we continue?"
-            //     ok "Yes, we should."
-            //     submitter "alice,bob"
-            //     parameters {
-            //         string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
-            //     }
-            // }
             when {
                 expression { "$params.DEPLOY" == "true" }
             }
             steps {
-                script{
-                    sh """
-                        echo "Building"
-                    """
+                script {
+                    sh '''
+                        echo "Deploying application..."
+                        # Add your deploy commands here
+                    '''
                 }
             }
         }
     }
-    post{
-        always{
+
+    // Post-build actions
+    post {
+        always {
             echo 'I will always say Hello again!'
             cleanWs()
         }
         success {
-            echo 'I will run if success'
+            echo 'Pipeline succeeded!'
         }
         failure {
-            echo 'I will run if failure'
+            echo 'Pipeline failed!'
         }
         aborted {
-            echo 'pipeline is aborted'
+            echo 'Pipeline was aborted!'
         }
     }
 }
