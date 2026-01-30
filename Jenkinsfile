@@ -5,7 +5,6 @@ pipeline {
         }
     }
 
-    // Pre-build environment variables
     environment {
         COURSE = "Jenkins"
         ACC_ID = "014641572640"
@@ -13,24 +12,15 @@ pipeline {
         COMPONENT = "catalogue"
     }
 
-    // Timeout & concurrency options
     options {
         timeout(time: 10, unit: 'MINUTES')
         disableConcurrentBuilds()
     }
 
-    // Tools section: NodeJS plugin ensures node & npm are available
-    tools {
-        nodejs 'node20' // Name must match NodeJS installation in Jenkins Global Tool Configuration
-    }
-
     stages {
-
-        // Stage 1: Read Version from package.json
         stage('Read Version') {
             steps {
                 script {
-                    // Use a local variable, not environment block
                     def packageJSON = readJSON file: 'package.json'
                     appVersion = packageJSON.version
                     echo "App version: ${appVersion}"
@@ -38,11 +28,12 @@ pipeline {
             }
         }
 
-        // Stage 2: Install Node.js dependencies
         stage('Install Dependencies') {
             steps {
                 script {
                     sh '''
+                        # Load environment for module-installed Node.js if needed
+                        source /etc/profile || true
                         node -v
                         npm -v
                         npm install
@@ -51,7 +42,6 @@ pipeline {
             }
         }
 
-        // Stage 3: Build Docker Image & Push to ECR
         stage('Build Image') {
             steps {
                 script {
@@ -67,7 +57,6 @@ pipeline {
             }
         }
 
-        // Stage 4: Deploy (Optional / gated by parameter)
         stage('Deploy') {
             when {
                 expression { "$params.DEPLOY" == "true" }
@@ -76,14 +65,12 @@ pipeline {
                 script {
                     sh '''
                         echo "Deploying application..."
-                        # Add your deploy commands here
                     '''
                 }
             }
         }
     }
 
-    // Post-build actions
     post {
         always {
             echo 'I will always say Hello again!'
