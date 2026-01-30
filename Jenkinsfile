@@ -1,8 +1,6 @@
 pipeline {
     agent {
-        node {
-            label 'AGENT-1'
-        }
+        node { label 'AGENT-1' }
     }
 
     environment {
@@ -22,8 +20,9 @@ pipeline {
             steps {
                 script {
                     def packageJSON = readJSON file: 'package.json'
-                    appVersion = packageJSON.version
+                    def appVersion = packageJSON.version
                     echo "App version: ${appVersion}"
+                    env.APP_VERSION = appVersion
                 }
             }
         }
@@ -32,10 +31,16 @@ pipeline {
             steps {
                 script {
                     sh '''
-                        # Load environment for module-installed Node.js if needed
-                        source /etc/profile || true
+                        # Load Node.js module
+                        source /etc/profile.d/modules.sh || true
+                        module load nodejs:20 || true
+
+                        # Check Node.js
+                        which node
                         node -v
                         npm -v
+
+                        # Install dependencies
                         npm install
                     '''
                 }
@@ -48,9 +53,9 @@ pipeline {
                     withAWS(region:'us-east-1', credentials:'aws-creds') {
                         sh """
                             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
-                            docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion} .
+                            docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${APP_VERSION} .
                             docker images
-                            docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${appVersion}
+                            docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${APP_VERSION}
                         """
                     }
                 }
@@ -62,11 +67,7 @@ pipeline {
                 expression { "$params.DEPLOY" == "true" }
             }
             steps {
-                script {
-                    sh '''
-                        echo "Deploying application..."
-                    '''
-                }
+                sh 'echo "Deploying application..."'
             }
         }
     }
@@ -76,14 +77,8 @@ pipeline {
             echo 'I will always say Hello again!'
             cleanWs()
         }
-        success {
-            echo 'Pipeline succeeded!'
-        }
-        failure {
-            echo 'Pipeline failed!'
-        }
-        aborted {
-            echo 'Pipeline was aborted!'
-        }
+        success { echo 'Pipeline succeeded!' }
+        failure { echo 'Pipeline failed!' }
+        aborted { echo 'Pipeline was aborted!' }
     }
 }
