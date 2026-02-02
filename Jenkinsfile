@@ -1,9 +1,5 @@
 pipeline {
-    agent {
-        node {
-            label 'AGENT-1'
-        }
-    }
+    agent any
 
     environment {
         COURSE    = "Jenkins"
@@ -12,65 +8,55 @@ pipeline {
         COMPONENT = "catalogue"
     }
 
-    options {
-        timeout(time: 10, unit: 'MINUTES')
-        disableConcurrentBuilds()
-    }
-
     stages {
+
+        stage('Checkout SCM') {
+            steps {
+                checkout scm
+            }
+        }
 
         stage('Read Version') {
             steps {
                 script {
-                    def packageJSON = readJSON file: 'package.json'
-                    env.appVersion = packageJSON.version
-                    echo "app version: ${env.appVersion}"
+                    def packageJson = readJSON file: 'package.json'
+                    echo "app version: ${packageJson.version}"
                 }
             }
         }
 
         stage('Install Dependencies') {
             steps {
-                sh 'npm install'
+                sh '''
+                  /usr/bin/npm install
+                '''
             }
         }
 
         stage('Unit Test') {
             steps {
-                sh 'npm test'
+                sh '''
+                  /usr/bin/npm test
+                '''
             }
         }
 
-        stage('Build Image') {
+        stage('Build') {
             steps {
-                script {
-                    withAWS(region: 'us-east-1', credentials: 'aws-creds') {
-                        sh """
-                          aws ecr get-login-password --region us-east-1 \
-                          | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
-
-                          docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${env.appVersion} .
-                          docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${PROJECT}/${COMPONENT}:${env.appVersion}
-                        """
-                    }
-                }
+                sh '''
+                  echo "Build stage completed"
+                '''
             }
         }
     }
 
     post {
         always {
-            echo 'I will always say Hello again!'
+            echo "I will always say Hello again!"
             cleanWs()
         }
-        success {
-            echo 'I will run if success'
-        }
         failure {
-            echo 'I will run if failure'
-        }
-        aborted {
-            echo 'pipeline is aborted'
+            echo "I will run if failure"
         }
     }
 }
