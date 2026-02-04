@@ -8,7 +8,7 @@ pipeline {
     environment {
         COURSE = "Jenkins"
         appVersion = ""
-        ACC_ID = "160885265516"
+        ACC_ID = "014641572640"
         PROJECT = "roboshop"
         COMPONENT = "catalogue"
     }
@@ -69,7 +69,7 @@ pipeline {
         } */
         stage('Dependabot Security Gate') {
             environment {
-                GITHUB_OWNER = 'daws-86s'
+                GITHUB_OWNER = 'gokulpavan-999'
                 GITHUB_REPO  = 'catalogue'
                 GITHUB_API   = 'https://api.github.com'
                 GITHUB_TOKEN = credentials('GITHUB_TOKEN')
