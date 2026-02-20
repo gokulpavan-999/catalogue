@@ -1,5 +1,9 @@
 name: feature-pipeline
 on: [push]
+permissions:
+  contents: read
+  statuses: write
+  security-events: read
 jobs:
   feature-pipeline:
     uses: gokulpavan-999/workflows/.github/workflows/feature-nodejs-pipeline.yaml@main
